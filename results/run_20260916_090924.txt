@@ -1,0 +1,57 @@
+Run: 20260916_090924
+Model: logistic_regression  params={'max_iter': 1000}
+Test size: 0.2  random_state: 42
+============================================================
+
+Train accuracy: 0.680
+Test accuracy:  0.677
+Gap (train - test): +0.002
+
+Classification report (test set):
+              precision    recall  f1-score   support
+
+           0       0.69      0.74      0.71       684
+           1       0.66      0.60      0.63       568
+
+    accuracy                           0.68      1252
+   macro avg       0.67      0.67      0.67      1252
+weighted avg       0.68      0.68      0.68      1252
+
+False positive rate by race
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+     African-American    FPR = 0.50  (n=6)
+     Caucasian           FPR = 0.00  (n=1)
+    -                    FPR = 0.20  (n=5)
+    ?                    FPR = 0.33  (n=3)
+    AFRICAN-AMERICAN     FPR = 0.00  (n=4)
+    African American     FPR = 0.33  (n=3)
+    African-American     FPR = 0.33  (n=303)
+    Asian                FPR = 0.33  (n=3)
+    CAUCASIAN            FPR = 0.25  (n=4)
+    Caucasian            FPR = 0.24  (n=232)
+    Hispanic             FPR = 0.10  (n=61)
+    Native American      FPR = 0.00  (n=2)
+    Other                FPR = 0.15  (n=41)
+    african-american     FPR = 0.10  (n=10)
+    caucasian            FPR = 0.00  (n=3)
+    hispanic             FPR = 0.33  (n=3)
+
+  COMPAS's own score:
+     African-American    FPR = 0.50  (n=6)
+     Caucasian           FPR = 0.00  (n=1)
+    -                    FPR = 0.20  (n=5)
+    ?                    FPR = 0.00  (n=3)
+    AFRICAN-AMERICAN     FPR = 0.25  (n=4)
+    African American     FPR = 0.33  (n=3)
+    African-American     FPR = 0.44  (n=303)
+    Asian                FPR = 0.00  (n=3)
+    CAUCASIAN            FPR = 0.25  (n=4)
+    Caucasian            FPR = 0.25  (n=232)
+    Hispanic             FPR = 0.15  (n=61)
+    Native American      FPR = 0.50  (n=2)
+    Other                FPR = 0.20  (n=41)
+    african-american     FPR = 0.50  (n=10)
+    caucasian            FPR = 0.00  (n=3)
+    hispanic             FPR = 0.33  (n=3)

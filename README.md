@@ -1,4 +1,5 @@
 # Baseline Predictive Pipeline -- ETAI
+20230007 – Khadija Belhamra
 
 This is the **starting point** for your semester project: a small but *complete* predictive pipeline -- every piece a real project needs (entry point, config, data loading, preprocessing, model, evaluation), just kept as simple as possible for now.
 
@@ -33,9 +34,9 @@ go on.
 
 This table is updated after each practical class, so you can always see what changed in the pipeline and why -- it's a running log, not a fixed syllabus.
 
-| Week | Practical class focus | Added to the pipeline |
-|------|------------------------|------------------------|
-| 2 | Introduction & baseline pipeline | Initial version: project structure, a single naive train/test split (no cross-validation), minimal preprocessing (drop rows with missing values, one-hot encode categoricals), logistic regression baseline, a first (deliberately simple) fairness check comparing our model's and COMPAS's own false-positive rate by race, train-vs-test accuracy reporting (to start spotting overfitting), and each run's full report saved automatically to `results/` |
+| Week | Practical class focus | Added to the pipeline | Comments |
+|------|------------------------|------------------------|----------|
+| 2 | Introduction & baseline pipeline | Initial version: project structure, a single naive train/test split (no cross-validation), minimal preprocessing (drop rows with missing values, one-hot encode categoricals), logistic regression baseline, a first (deliberately simple) fairness check comparing our model's and COMPAS's own false-positive rate by race, train-vs-test accuracy reporting (to start spotting overfitting), and each run's full report saved automatically to `results/` | We have: <br> Logistic reg train accuracy: 0.680 <br> Logistic reg test accuracy:  0.677 <br> Gap (train - test): +0.002 Tree train accuracy: 0.829 <br> Tree test accuracy:  0.626 <br> Gap (train - test): +0.203 <br> The logistic regression has a better test score than the tree model. We should also note that the decision tree is clearly overfitting with a gap of over 0.2 units between the train and test accuracy. The decision tree needs to be parametrized to reduce overfitting and improve its performance on unseen data.|
 
 ## Environment setup
 

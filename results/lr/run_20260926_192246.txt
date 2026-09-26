@@ -1,0 +1,35 @@
+Run: 20260926_192246
+Model: logistic_regression  params={}
+Test size: 0.2  random_state: 42
+============================================================
+
+Train accuracy: 0.673
+Test accuracy:  0.669
+Gap (train - test): +0.004
+
+Classification report (test set):
+              precision    recall  f1-score   support
+
+           0       0.67      0.77      0.71       670
+           1       0.67      0.55      0.60       567
+
+    accuracy                           0.67      1237
+   macro avg       0.67      0.66      0.66      1237
+weighted avg       0.67      0.67      0.66      1237
+
+False positive rate by race
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.32  (n=285)
+    Asian                FPR = 0.25  (n=4)
+    Caucasian            FPR = 0.16  (n=265)
+    Hispanic             FPR = 0.26  (n=66)
+    Other                FPR = 0.12  (n=50)
+
+  COMPAS's own score:
+    African-American     FPR = 0.46  (n=285)
+    Asian                FPR = 0.25  (n=4)
+    Caucasian            FPR = 0.23  (n=265)
+    Hispanic             FPR = 0.26  (n=66)
+    Other                FPR = 0.16  (n=50)

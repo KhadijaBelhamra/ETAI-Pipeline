@@ -5,5 +5,5 @@ __pycache__/
 .ipynb_checkpoints/
 *.egg-info/
 
-git rm --cached -- 02_preprocessing.ipynb
-git rm --cached -- 03_cross_validation.ipynb
+02_preprocessing.ipynb
+03_cross_validation.ipynb

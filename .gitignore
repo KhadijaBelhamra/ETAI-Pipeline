@@ -4,3 +4,6 @@ __pycache__/
 .DS_Store
 .ipynb_checkpoints/
 *.egg-info/
+
+git rm --cached -- 02_preprocessing.ipynb
+git rm --cached -- 03_cross_validation.ipynb

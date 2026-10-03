@@ -1,0 +1,51 @@
+Run: 20261003_204849
+Model: dummy  params={'strategy': 'most_frequent'}
+Test size: 0.2  random_state: 42
+CV: 5-fold  random_state: 42
+============================================================
+
+Cross-validation (5 stratified folds, metric: accuracy)
+
+ fold  train  validation    gap
+    1  0.549       0.549  0.000
+    2  0.549       0.549 -0.000
+    3  0.549       0.549 -0.000
+    4  0.549       0.549 -0.000
+    5  0.549       0.549 -0.000
+
+Train       mean = 0.549   std = 0.000
+Validation  mean = 0.549   std = 0.000
+Gap         mean = -0.000   std = 0.000
+
+Classification report (out-of-fold predictions, development set):
+              precision    recall  f1-score   support
+
+           0       0.55      1.00      0.71      3170
+           1       0.00      0.00      0.00      2601
+
+    accuracy                           0.55      5771
+   macro avg       0.27      0.50      0.35      5771
+weighted avg       0.30      0.55      0.39      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.00  (n=1420)
+    Asian                FPR = 0.00  (n=21)
+    Caucasian            FPR = 0.00  (n=1161)
+    Hispanic             FPR = 0.00  (n=311)
+    Native American      FPR = 0.00  (n=6)
+    Other                FPR = 0.00  (n=185)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+
+Final model: dummy refit on all 5771 development rows.
+
+Locked test set: 1443 rows set aside, not evaluated. Development set: 5771 rows.

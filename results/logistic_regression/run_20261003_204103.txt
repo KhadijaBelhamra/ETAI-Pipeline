@@ -1,0 +1,51 @@
+Run: 20261003_204103
+Model: logistic_regression  params={'max_iter': 2000}
+Test size: 0.2  random_state: 42
+CV: 5-fold  random_state: 42
+============================================================
+
+Cross-validation (5 stratified folds, metric: accuracy)
+
+ fold  train  validation    gap
+    1  0.676       0.680 -0.004
+    2  0.680       0.654  0.026
+    3  0.674       0.675 -0.001
+    4  0.672       0.688 -0.016
+    5  0.674       0.665  0.010
+
+Train       mean = 0.675   std = 0.003
+Validation  mean = 0.672   std = 0.013
+Gap         mean = +0.003   std = 0.016
+
+Classification report (out-of-fold predictions, development set):
+              precision    recall  f1-score   support
+
+           0       0.67      0.81      0.73      3170
+           1       0.68      0.51      0.58      2601
+
+    accuracy                           0.67      5771
+   macro avg       0.67      0.66      0.66      5771
+weighted avg       0.67      0.67      0.66      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.26  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.13  (n=1161)
+    Hispanic             FPR = 0.15  (n=311)
+    Native American      FPR = 0.00  (n=6)
+    Other                FPR = 0.14  (n=185)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+
+Final model: logistic_regression refit on all 5771 development rows.
+
+Locked test set: 1443 rows set aside, not evaluated. Development set: 5771 rows.

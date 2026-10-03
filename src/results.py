@@ -9,9 +9,8 @@ from datetime import datetime
 
 def save_run(results_dir: str, config: dict, report_text: str) -> str:
     """
-    Writes one run's full report to a timestamped .txt file inside
-    `results_dir` (created automatically if it doesn't exist yet) and
-    returns the path that was written.
+    Save one run's full report to a timestamped .txt file.
+    A separate results directory is used for each model.
     """
     os.makedirs(results_dir, exist_ok=True)
 
@@ -20,9 +19,12 @@ def save_run(results_dir: str, config: dict, report_text: str) -> str:
 
     header = (
         f"Run: {timestamp}\n"
-        f"Model: {config['model']['type']}  params={config['model']['params']}\n"
-        f"Test size: {config['split']['test_size']}  "
-        f"random_state: {config['split']['random_state']}\n"
+        f"Model: {config['model']['type']}  "
+        f"params={config['model']['params']}\n"
+        f"Test size: {config['test_set']['size']}  "
+        f"random_state: {config['test_set']['random_state']}\n"
+        f"CV: {config['cv']['n_splits']}-fold  "
+        f"random_state: {config['cv']['random_state']}\n"
         + "=" * 60 + "\n\n"
     )
 

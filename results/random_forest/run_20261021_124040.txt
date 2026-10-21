@@ -1,0 +1,100 @@
+Run: 20261021_124040
+Model: random_forest  params={'n_estimators': 200, 'random_state': 42, 'n_jobs': -1, 'class_weight': 'balanced'}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: ['log_priors', 'has_priors', 'priors_per_adult_year', 'has_juvenile_record', 'has_juvenile_felony', 'young_with_priors']
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy']  selection metric: accuracy
+Tuning: Optuna, 30 trials x 5 folds, nested CV  random_state=42
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {'n_estimators': 200, 'random_state': 42, 'n_jobs': -1, 'class_weight': 'balanced'}
+
+Cross-validation (5 stratified folds, selection metric: accuracy)
+
+ fold  train  validation   gap  accuracy
+    1  0.749       0.634 0.116     0.634
+    2  0.765       0.635 0.130     0.635
+    3  0.723       0.624 0.099     0.624
+    4  0.758       0.655 0.103     0.655
+    5  0.744       0.644 0.101     0.644
+
+          mean   std
+accuracy 0.638 0.012
+
+accuracy: train-validation gap mean = +0.110
+
+No-model floor (dummy, same folds): accuracy = 0.549
+
+Nested cross-validation (the tuning procedure, estimated honestly) (5 stratified folds, selection metric: accuracy)
+
+ fold  train  validation    gap  accuracy  inner_best  model__max_depth  model__min_samples_leaf model__max_features
+    1  0.686       0.681  0.004     0.681       0.678                 5                        5                sqrt
+    2  0.696       0.651  0.045     0.651       0.686                 5                        1               0.500
+    3  0.682       0.685 -0.003     0.685       0.674                 5                       10               0.500
+    4  0.684       0.679  0.004     0.679       0.677                 8                       59                sqrt
+    5  0.684       0.678  0.007     0.678       0.674                 4                        2               1.000
+
+          mean   std
+accuracy 0.675 0.014
+
+accuracy: train-validation gap mean = +0.011
+
+Tuning on the whole development set (30 Optuna trials, metric: accuracy)
+Best hyperparameters: {'model__max_depth': 6, 'model__min_samples_leaf': 1, 'model__max_features': 'sqrt'}
+Best mean CV score:   0.683  (the maximum over all trials -- optimistic)
+
+Top 5 trials:
+ trial  mean accuracy  model__max_depth model__max_features  model__min_samples_leaf   std
+     1          0.683                 6                sqrt                        1 0.017
+    27          0.683                 6                sqrt                        1 0.017
+    11          0.683                 6                sqrt                        1 0.017
+    17          0.679                 4                sqrt                        9 0.015
+     3          0.679                 7                sqrt                        3 0.016
+
+Optimism check (nested CV):
+  tuning score inside the outer folds (inner_best) mean = 0.678
+  honest score on the outer folds (validation)     mean = 0.675
+  optimism = +0.003   -> report the honest one
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         2299          871
+true 1         1005         1596
+
+              precision    recall  f1-score   support
+
+           0       0.70      0.73      0.71      3170
+           1       0.65      0.61      0.63      2601
+
+    accuracy                           0.67      5771
+   macro avg       0.67      0.67      0.67      5771
+weighted avg       0.67      0.67      0.67      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.35  (n=1420)
+    Asian                FPR = 0.14  (n=21)
+    Caucasian            FPR = 0.22  (n=1161)
+    Hispanic             FPR = 0.19  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.21  (n=185)
+    unknown              FPR = 0.26  (n=66)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+    unknown              FPR = 0.33  (n=66)
+
+Final model: random_forest refit on all 5771 development rows.
+
+Scoreboard:
+            run         model  tuned  engineered  accuracy   std  untuned  floor
+20261021_124040 random_forest   True           6     0.675 0.014    0.638  0.549

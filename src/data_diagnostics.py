@@ -1,11 +1,19 @@
 """
-Data diagnostics -- generic, config-driven techniques for finding what's actually wrong with a dataset before preprocessing touches it: a tested missingness mechanism 
-per column, domain-rule invalid-value detection, and a two-way duplicate check.
+Data diagnostics: config-driven checks to run before preprocessing.
 
-Built in week 3 -- see Practical/W3/notebooks/01_eda_introduction.ipynb for the full walkthrough these three functions are lifted from, applied to this course's real
-(deliberately messy) COMPAS data. Nothing here is hardcoded to COMPAS's column names; every column list and rule comes from config.yaml's `diagnostics` section, so this
-module works unchanged on a different dataset.
+Tests the missingness mechanism of a column
+Flags domain-rule violations
+Checks duplicates. 
+
+The functions here were used in the Week 3 EDA notebook to diagnose the dataset. 
+They are NOT called by main.py. Their findings were written into config.yaml's 
+`diagnostics` and `preprocessing` sections, and the pipeline applies those rules 
+through `clean_dataset()` and `drop_duplicate_rows()` in src/preprocessing.py.
+
+Note: `flag_invalid_values` here is a copy of the one in src/preprocessing.py, which 
+is the version the pipeline actually uses.
 """
+
 import numpy as np
 import pandas as pd
 from scipy.stats import chi2_contingency
@@ -25,13 +33,11 @@ def _cramers_v(confusion_matrix: pd.DataFrame) -> float:
 
 def test_missingness_mechanism(df: pd.DataFrame, target_col: str, candidate_predictors: list) -> pd.DataFrame:
     """
-    For `target_col`'s missing-value indicator, test association against each column in
-    `candidate_predictors` via chi-square + Cramer's V. Returns one row per predictor,
-    sorted by association strength (strongest first).
+    Test the association between `target_col`'s missing-value indicator and each column in
+    `candidate_predictors` (chi-square + Cramer's V). One row per predictor, strongest first.
 
-    Reading the verdict: a max Cramer's V well under 0.1 across every predictor reads as
-    MCAR (missing completely at random -- safe to impute simply). Anything well above
-    that (roughly >= 0.2) reads as MAR/MNAR, and the top predictor usually points at why.
+    Rule of thumb: Cramer's V under ~0.1 everywhere suggests MCAR; above ~0.2 suggests
+    MAR/MNAR, and the top predictor usually hints at why.
     """
     indicator = df[target_col].isna()
     rows = []
@@ -50,12 +56,10 @@ def test_missingness_mechanism(df: pd.DataFrame, target_col: str, candidate_pred
 
 def flag_invalid_values(df: pd.DataFrame, rules: dict) -> pd.DataFrame:
     """
-    Applies a dict of {column: {"min": ..., "max": ...}} domain rules (either bound is
-    optional) and converts violations to NaN **in place** on `df`. An "impossible but
-    not missing" value (an age of -3, a COMPAS decile score of 15) counts as missing
-    once this runs -- `.isna()` alone would never have caught it.
+    Apply `{column: {"min": ..., "max": ...}}` domain rules (either bound optional) and
+    set violations to NaN **in place** on `df`.
 
-    Returns a small report: how many violations were found per column.
+    Returns a small report with the number of violations per column.
     """
     report_rows = []
     for column, bounds in rules.items():
@@ -72,10 +76,9 @@ def flag_invalid_values(df: pd.DataFrame, rules: dict) -> pd.DataFrame:
 
 def find_duplicates(df: pd.DataFrame, id_column: str = None) -> dict:
     """
-    Checks duplicates two ways: exact row duplication, and (if `id_column` is given)
-    repeated identifiers. The two checks can disagree in general -- a duplicate case
-    re-entered with even one typo'd field would only be caught by the id check -- so
-    both are reported rather than trusting either one alone.
+    Count exact duplicate rows and, if `id_column` is given, repeated ids. Both are
+    reported because they can disagree (a re-entered case with one typo only shows up
+    in the id check).
     """
     result = {"exact_row_duplicates": int(df.duplicated().sum())}
     if id_column and id_column in df.columns:

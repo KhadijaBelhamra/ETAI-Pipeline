@@ -1,0 +1,106 @@
+Run: 20261021_142921
+Model: naive_bayes  params={}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: ['log_priors', 'has_priors', 'priors_per_adult_year', 'has_juvenile_record', 'has_juvenile_felony', 'young_with_priors']
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy']  selection metric: accuracy
+Tuning: Optuna, 30 trials x 5 folds, nested CV  random_state=42
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {}
+
+Cross-validation (5 stratified folds, selection metric: accuracy)
+
+ fold  train  validation    gap  accuracy
+    1  0.656       0.655  0.000     0.655
+    2  0.657       0.633  0.024     0.633
+    3  0.654       0.656 -0.002     0.656
+    4  0.650       0.675 -0.025     0.675
+    5  0.656       0.651  0.005     0.651
+
+          mean   std
+accuracy 0.654 0.015
+
+accuracy: train-validation gap mean = +0.000
+
+No-model floor (dummy, same folds): accuracy = 0.549
+
+Nested cross-validation (the tuning procedure, estimated honestly) (5 stratified folds, selection metric: accuracy)
+
+ fold  train  validation    gap  accuracy  inner_best  model__var_smoothing
+    1  0.660       0.656  0.004     0.656       0.659                 0.020
+    2  0.664       0.637  0.027     0.637       0.663                 0.035
+    3  0.658       0.663 -0.004     0.663       0.658                 0.035
+    4  0.657       0.676 -0.019     0.676       0.654                 0.035
+    5  0.658       0.657  0.001     0.657       0.658                 0.012
+
+          mean   std
+accuracy 0.658 0.014
+
+accuracy: train-validation gap mean = +0.002
+
+Tuning on the whole development set (30 Optuna trials, metric: accuracy)
+Best hyperparameters: {'model__var_smoothing': 0.028698379250004864}
+Best mean CV score:   0.658  (the maximum over all trials -- optimistic)
+
+Top 5 trials:
+ trial  mean accuracy  model__var_smoothing   std
+     1          0.658                 0.029 0.014
+    11          0.658                 0.035 0.014
+    21          0.658                 0.020 0.014
+    10          0.657                 0.047 0.013
+    28          0.657                 0.012 0.015
+
+Optimism check (nested CV):
+  tuning score inside the outer folds (inner_best) mean = 0.658
+  honest score on the outer folds (validation)     mean = 0.658
+  optimism = +0.001   -> report the honest one
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         2816          354
+true 1         1621          980
+
+              precision    recall  f1-score   support
+
+           0       0.63      0.89      0.74      3170
+           1       0.73      0.38      0.50      2601
+
+    accuracy                           0.66      5771
+   macro avg       0.68      0.63      0.62      5771
+weighted avg       0.68      0.66      0.63      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.16  (n=1420)
+    Asian                FPR = 0.05  (n=21)
+    Caucasian            FPR = 0.07  (n=1161)
+    Hispanic             FPR = 0.08  (n=311)
+    Native American      FPR = 0.00  (n=6)
+    Other                FPR = 0.06  (n=185)
+    unknown              FPR = 0.14  (n=66)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+    unknown              FPR = 0.33  (n=66)
+
+Final model: naive_bayes refit on all 5771 development rows.
+
+Scoreboard:
+            run                 model  tuned  engineered  accuracy   std  untuned  floor
+20261021_141509              adaboost   True           6     0.677 0.011    0.672  0.549
+20261021_140230 oblique_random_forest   True           6     0.677 0.014    0.640  0.549
+20261021_124040         random_forest   True           6     0.675 0.014    0.638  0.549
+20261021_142531   logistic_regression   True           6     0.674 0.014    0.678  0.549
+20261021_142738         decision_tree   True           6     0.664 0.014    0.575  0.549
+20261021_142921           naive_bayes   True           6     0.658 0.014    0.654  0.549
+20261021_124854                 dummy  False           6     0.549 0.000    0.549  0.549

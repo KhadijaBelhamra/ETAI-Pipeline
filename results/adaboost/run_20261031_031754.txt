@@ -1,0 +1,120 @@
+Run: 20261031_031754
+Model: adaboost  params={'n_estimators': 100, 'learning_rate': 0.5, 'random_state': 42}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: ['log_priors', 'has_priors', 'priors_per_adult_year', 'has_juvenile_record', 'has_juvenile_felony', 'young_with_priors']
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1', 'fbeta_0.5', 'roc_auc', 'average_precision']  selection metric: fbeta_0.5
+Tuning: Optuna, 30 trials x 5 folds, nested CV  random_state=42
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {'n_estimators': 100, 'learning_rate': 0.5, 'random_state': 42}
+
+Cross-validation (5 stratified folds, selection metric: fbeta_0.5)
+
+ fold  train  validation    gap  accuracy  balanced_accuracy  precision  recall    f1  fbeta_0.5  roc_auc  average_precision
+    1  0.644       0.643  0.001     0.674              0.660      0.686   0.512 0.587      0.643    0.723              0.668
+    2  0.644       0.618  0.025     0.657              0.645      0.646   0.529 0.581      0.618    0.700              0.666
+    3  0.643       0.651 -0.008     0.681              0.667      0.692   0.527 0.598      0.651    0.726              0.691
+    4  0.643       0.642  0.001     0.673              0.655      0.704   0.475 0.567      0.642    0.730              0.706
+    5  0.646       0.641  0.005     0.673              0.657      0.692   0.496 0.578      0.641    0.728              0.676
+
+                   mean   std
+accuracy          0.672 0.009
+balanced_accuracy 0.657 0.008
+precision         0.684 0.022
+recall            0.508 0.023
+f1                0.582 0.011
+fbeta_0.5         0.639 0.012
+roc_auc           0.721 0.012
+average_precision 0.681 0.017
+
+fbeta_0.5: train-validation gap mean = +0.005
+
+No-model floor (dummy, same folds): fbeta_0.5 = 0.000
+
+Nested cross-validation (the tuning procedure, estimated honestly) (5 stratified folds, selection metric: fbeta_0.5)
+
+ fold  train  validation    gap  accuracy  balanced_accuracy  precision  recall    f1  fbeta_0.5  roc_auc  average_precision  inner_best  model__estimator__max_depth  model__n_estimators  model__learning_rate
+    1  0.655       0.649  0.006     0.680              0.667      0.685   0.537 0.602      0.649    0.729              0.677       0.647                            3                  393                 0.024
+    2  0.663       0.619  0.044     0.658              0.644      0.658   0.500 0.568      0.619    0.696              0.663       0.652                            2                  258                 0.949
+    3  0.651       0.660 -0.009     0.689              0.678      0.687   0.569 0.623      0.660    0.733              0.697       0.649                            3                  137                 0.208
+    4  0.656       0.652  0.004     0.680              0.664      0.707   0.496 0.583      0.652    0.732              0.713       0.641                            3                  228                 0.213
+    5  0.658       0.653  0.005     0.682              0.668      0.697   0.521 0.596      0.653    0.715              0.641       0.650                            4                   44                 0.015
+
+                   mean   std
+accuracy          0.678 0.012
+balanced_accuracy 0.664 0.013
+precision         0.687 0.018
+recall            0.525 0.030
+f1                0.594 0.020
+fbeta_0.5         0.646 0.016
+roc_auc           0.721 0.016
+average_precision 0.678 0.028
+
+fbeta_0.5: train-validation gap mean = +0.010
+
+Tuning on the whole development set (30 Optuna trials, metric: fbeta_0.5)
+Best hyperparameters: {'model__estimator__max_depth': 4, 'model__n_estimators': 211, 'model__learning_rate': 0.011961297870356498}
+Best mean CV score:   0.649  (the maximum over all trials -- optimistic)
+
+Top 5 trials:
+ trial  mean fbeta_0.5  model__estimator__max_depth  model__learning_rate  model__n_estimators   std
+    28           0.649                            4                 0.012                  211 0.015
+    25           0.648                            3                 0.034                  377 0.013
+    19           0.648                            3                 0.033                  330 0.013
+    16           0.647                            4                 0.033                  193 0.016
+     8           0.646                            4                 0.025                  220 0.014
+
+Optimism check (nested CV):
+  tuning score inside the outer folds (inner_best) mean = 0.648
+  honest score on the outer folds (validation)     mean = 0.646
+  optimism = +0.001   -> report the honest one
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         2546          624
+true 1         1236         1365
+
+              precision    recall  f1-score   support
+
+           0       0.67      0.80      0.73      3170
+           1       0.69      0.52      0.59      2601
+
+    accuracy                           0.68      5771
+   macro avg       0.68      0.66      0.66      5771
+weighted avg       0.68      0.68      0.67      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.27  (n=1420)
+    Asian                FPR = 0.14  (n=21)
+    Caucasian            FPR = 0.14  (n=1161)
+    Hispanic             FPR = 0.14  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+    unknown              FPR = 0.18  (n=66)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+    unknown              FPR = 0.33  (n=66)
+
+Final model: adaboost refit on all 5771 development rows.
+
+Scoreboard:
+            run                 model  tuned  engineered  fbeta_0.5   std  untuned  floor
+20261031_031344 oblique_random_forest   True           6      0.647 0.019    0.599  0.000
+20261031_031754              adaboost   True           6      0.646 0.016    0.639  0.000
+20261031_030606   logistic_regression   True           6      0.642 0.013    0.644  0.000
+20261031_031021         random_forest   True           6      0.639 0.016    0.599  0.000
+20261031_030900         decision_tree   True           6      0.628 0.017    0.534  0.000
+20261031_030725           naive_bayes  False           6      0.611 0.027    0.611  0.000
+20261031_030510                 dummy  False           6      0.000 0.000    0.000  0.000

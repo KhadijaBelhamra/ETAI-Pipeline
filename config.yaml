@@ -19,10 +19,9 @@ cv:
   n_splits: 5
   shuffle: true
   random_state: 42
-  # Metrics reported for every fold (scikit-learn scorer names, or fbeta_<beta>).
-  metrics: ["accuracy"]
-  # The metric that tuning optimises and the scoreboard ranks by (must be in `metrics`).
-  selection_metric: "accuracy"
+ # Reported for every run. fbeta_<beta> weights recall beta times as much as precision.
+  metrics: ["accuracy", "balanced_accuracy", "precision", "recall", "f1", "fbeta_0.5", "roc_auc", "average_precision"]
+  selection_metric: "fbeta_0.5"
   n_jobs: 1             # -1 = all cores (only worth it for slow models such as random forest)
 
 # Cleaning rules from the week 3 diagnosis, read by clean_dataset().
@@ -83,8 +82,8 @@ preprocessing:
 #        | "oblique_random_forest" | "adaboost"
 # To switch, replace the active block with one of the examples below.
 model:
-  type: "naive_bayes"
-  params: {}
+  type: "gradient_boosting"
+  params: {n_estimators: 100, learning_rate: 0.1, random_state: 42}
 
   # Other models' params, to swap in. class_weight "balanced" weights each class by 1 / its frequency
   # dummy:                  {strategy: most_frequent}   # the no-model floor
@@ -94,6 +93,9 @@ model:
   # random_forest:          {n_estimators: 200, random_state: 42, n_jobs: -1, class_weight: balanced}
   # oblique_random_forest:  {n_estimators: 200, random_state: 42, n_jobs: -1}
   # adaboost:               {n_estimators: 100, learning_rate: 0.5, random_state: 42}
+  # hist_gradient_boosting: {random_state: 42, class_weight: balanced}
+  # gradient_boosting:      {n_estimators: 100, learning_rate: 0.1, random_state: 42}
+
 
 tuning:
   enabled: true
@@ -116,13 +118,25 @@ tuning:
     oblique_random_forest:
       model__estimator__tree__max_depth: {type: int, low: 2, high: 30}
       model__estimator__tree__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
-      model__estimator__project__n_components: {type: int, low: 3, high: 10}   # <= number of features
+      model__estimator__project__n_components: {type: int, low: 3, high: 10}
     adaboost:
       model__estimator__max_depth: {type: int, low: 1, high: 8}
       model__n_estimators: {type: int, low: 25, high: 400, log: true}
       model__learning_rate: {type: float, low: 0.01, high: 1.0, log: true}
     naive_bayes:
       model__var_smoothing: {type: float, low: 0.000000000001, high: 0.1, log: true}
+    hist_gradient_boosting:
+      model__max_iter: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_leaf_nodes: {type: int, low: 2, high: 63, log: true}
+      model__min_samples_leaf: {type: int, low: 5, high: 200, log: true}
+      model__l2_regularization: {type: float, low: 0.000001, high: 10.0, log: true}
+    gradient_boosting:
+      model__n_estimators: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_depth: {type: int, low: 1, high: 6}
+      model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__subsample: {type: float, low: 0.5, high: 1.0}
 
 output:
   results_dir: "results"            # each run's full report: results/<model>/run_<timestamp>.txt

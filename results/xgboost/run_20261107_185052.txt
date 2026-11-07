@@ -1,0 +1,127 @@
+Run: 20261107_185052
+Model: xgboost  params={'n_estimators': 200, 'learning_rate': 0.1, 'max_depth': 3, 'random_state': 42, 'n_jobs': -1}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: ['log_priors', 'has_priors', 'priors_per_adult_year', 'has_juvenile_record', 'has_juvenile_felony', 'young_with_priors']
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1', 'fbeta_0.5', 'roc_auc', 'average_precision']  selection metric: fbeta_0.5
+Feature selection: VoteSelector, min_votes=2 (before tuning)
+Tuning: Optuna, 30 trials x 5 folds, nested CV  random_state=42
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {'n_estimators': 200, 'learning_rate': 0.1, 'max_depth': 3, 'random_state': 42, 'n_jobs': -1}
+
+Cross-validation (5 stratified folds, selection metric: fbeta_0.5)
+
+ fold  train  validation   gap  accuracy  balanced_accuracy  precision  recall    f1  fbeta_0.5  roc_auc  average_precision
+    1  0.670       0.628 0.042     0.664              0.650      0.671   0.501 0.574      0.628    0.718              0.667
+    2  0.668       0.619 0.049     0.658              0.646      0.646   0.533 0.584      0.619    0.702              0.659
+    3  0.661       0.660 0.001     0.688              0.675      0.697   0.544 0.611      0.660    0.730              0.697
+    4  0.660       0.656 0.004     0.684              0.668      0.709   0.506 0.590      0.656    0.726              0.715
+    5  0.664       0.648 0.015     0.679              0.666      0.687   0.531 0.599      0.648    0.736              0.690
+
+                   mean   std
+accuracy          0.675 0.013
+balanced_accuracy 0.661 0.012
+precision         0.682 0.025
+recall            0.523 0.019
+f1                0.592 0.014
+fbeta_0.5         0.642 0.018
+roc_auc           0.722 0.013
+average_precision 0.686 0.023
+
+fbeta_0.5: train-validation gap mean = +0.022
+
+No-model floor (dummy, same folds): fbeta_0.5 = 0.000
+
+Nested cross-validation (the tuning procedure, estimated honestly) (5 stratified folds, selection metric: fbeta_0.5)
+
+ fold  train  validation    gap  accuracy  balanced_accuracy  precision  recall    f1  fbeta_0.5  roc_auc  average_precision  inner_best  model__n_estimators  model__learning_rate  model__max_depth  model__min_child_weight  model__subsample  model__colsample_bytree  model__reg_lambda  model__reg_alpha  model__gamma  select__min_votes
+    1  0.656       0.639  0.017     0.672              0.659      0.675   0.526 0.591      0.639    0.728              0.675       0.652                  387                 0.019                 1                    2.507             0.863                    0.505              0.001             0.001         0.001                  1
+    2  0.661       0.626  0.035     0.663              0.653      0.649   0.550 0.595      0.626    0.708              0.673       0.654                  376                 0.040                 2                    1.438             0.858                    0.643              0.003             0.000         3.753                  1
+    3  0.650       0.660 -0.010     0.689              0.677      0.690   0.562 0.619      0.660    0.731              0.698       0.646                  409                 0.012                 2                    3.424             0.805                    0.701              0.001             0.000         0.029                  1
+    4  0.648       0.658 -0.010     0.685              0.671      0.703   0.523 0.600      0.658    0.731              0.719       0.646                  155                 0.077                 1                    2.215             0.713                    0.660              0.004             0.000         0.020                  1
+    5  0.652       0.655 -0.003     0.685              0.672      0.689   0.546 0.609      0.655    0.735              0.694       0.649                  309                 0.093                 1                    2.501             0.739                    0.628              0.001             0.000         0.000                  1
+
+                   mean   std
+accuracy          0.679 0.011
+balanced_accuracy 0.666 0.010
+precision         0.681 0.021
+recall            0.541 0.016
+f1                0.603 0.011
+fbeta_0.5         0.647 0.015
+roc_auc           0.727 0.011
+average_precision 0.692 0.019
+
+fbeta_0.5: train-validation gap mean = +0.006
+
+Tuning on the whole development set (30 Optuna trials, metric: fbeta_0.5)
+Best hyperparameters: {'model__n_estimators': 247, 'model__learning_rate': 0.030600722027532813, 'model__max_depth': 1, 'model__min_child_weight': 3.4907288517547466, 'model__subsample': 0.8005349880039756, 'model__colsample_bytree': 0.5657044409206564, 'model__reg_lambda': 0.0010863307863370883, 'model__reg_alpha': 9.858766959107927e-06, 'model__gamma': 0.00013047855926770892, 'select__min_votes': 1}
+Best mean CV score:   0.650  (the maximum over all trials -- optimistic)
+
+Top 5 trials:
+ trial  mean fbeta_0.5  model__colsample_bytree  model__gamma  model__learning_rate  model__max_depth  model__min_child_weight  model__n_estimators  model__reg_alpha  model__reg_lambda  model__subsample  select__min_votes   std
+    10           0.650                    0.566         0.000                 0.031                 1                    3.491                  247             0.000              0.001             0.801                  1 0.016
+    25           0.650                    0.544         0.000                 0.038                 1                    4.502                  225             0.000              0.005             0.751                  1 0.017
+    19           0.649                    0.572         0.002                 0.046                 2                    2.073                  380             0.000              0.025             0.888                  1 0.020
+    21           0.648                    0.621         0.002                 0.061                 1                    2.053                  359             0.000              0.004             0.866                  1 0.019
+    18           0.648                    0.527         0.001                 0.030                 1                    1.451                  448             0.000              0.009             0.847                  1 0.015
+
+Optimism check (nested CV):
+  tuning score inside the outer folds (inner_best) mean = 0.649
+  honest score on the outer folds (validation)     mean = 0.647
+  optimism = +0.002   -> report the honest one
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         2509          661
+true 1         1193         1408
+
+              precision    recall  f1-score   support
+
+           0       0.68      0.79      0.73      3170
+           1       0.68      0.54      0.60      2601
+
+    accuracy                           0.68      5771
+   macro avg       0.68      0.67      0.67      5771
+weighted avg       0.68      0.68      0.67      5771
+
+False positive rate by race (development set, out-of-fold)
+(share of people who did NOT reoffend, but were predicted to)
+
+  Our model:
+    African-American     FPR = 0.28  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.15  (n=1161)
+    Hispanic             FPR = 0.15  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.16  (n=185)
+    unknown              FPR = 0.20  (n=66)
+
+  COMPAS's own score:
+    African-American     FPR = 0.45  (n=1420)
+    Asian                FPR = 0.10  (n=21)
+    Caucasian            FPR = 0.23  (n=1161)
+    Hispanic             FPR = 0.23  (n=311)
+    Native American      FPR = 0.17  (n=6)
+    Other                FPR = 0.14  (n=185)
+    unknown              FPR = 0.33  (n=66)
+
+Final model: xgboost refit on all 5771 development rows.
+Features kept: 5 of 16: numeric__age, numeric__priors_count, numeric__log_priors, numeric__priors_per_adult_year, categorical__age_cat
+
+Scoreboard:
+            run                  model  tuned  engineered feature_selection  fbeta_0.5   std  untuned  floor
+20261107_185052                xgboost   True           6       min_votes 1      0.647 0.015    0.642  0.000
+20261031_113822      gradient_boosting   True           6               off      0.647 0.017    0.643  0.000
+20261031_031344  oblique_random_forest   True           6               off      0.647 0.019    0.599  0.000
+20261031_031754               adaboost   True           6               off      0.646 0.016    0.639  0.000
+20261107_184653                xgboost   True           6               off      0.645 0.015    0.642  0.000
+20261107_184328                xgboost  False           6               off      0.642 0.017    0.642  0.000
+20261031_030606    logistic_regression   True           6               off      0.642 0.013    0.644  0.000
+20261031_113037 hist_gradient_boosting   True           6               off      0.640 0.013    0.621  0.000
+20261031_031021          random_forest   True           6               off      0.639 0.016    0.599  0.000
+20261031_030900          decision_tree   True           6               off      0.628 0.017    0.534  0.000
+20261031_030725            naive_bayes  False           6               off      0.611 0.027    0.611  0.000
+20261031_030510                  dummy  False           6               off      0.000 0.000    0.000  0.000

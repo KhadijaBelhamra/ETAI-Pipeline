@@ -19,8 +19,13 @@ cv:
   n_splits: 5
   shuffle: true
   random_state: 42
- # Reported for every run. fbeta_<beta> weights recall beta times as much as precision.
+  # Metrics reported for every fold (scikit-learn scorer names, or fbeta_<beta>).
+  # A false positive (predicting "will reoffend" for someone who does not) costs more than a false
+  # negative, so precision matters more than recall. F-beta with beta < 1 weights precision more:
+  # fbeta_0.5 counts precision twice as much as recall, fbeta_0.25 four times. (fbeta_2, the usual
+  # example, does the opposite.) roc_auc / average_precision do not depend on the 0.5 threshold.
   metrics: ["accuracy", "balanced_accuracy", "precision", "recall", "f1", "fbeta_0.5", "roc_auc", "average_precision"]
+  # The metric that tuning optimises and the scoreboard ranks by (must be in `metrics`).
   selection_metric: "fbeta_0.5"
   n_jobs: 1             # -1 = all cores (only worth it for slow models such as random forest)
 
@@ -79,26 +84,28 @@ preprocessing:
     categorical_strategy: "most_frequent"
 
 # Model: "dummy" | "logistic_regression" | "naive_bayes" | "decision_tree" | "random_forest"
-#        | "oblique_random_forest" | "adaboost"
+#        | "oblique_random_forest" | "adaboost" | "gradient_boosting" | "hist_gradient_boosting" | "xgboost"
 # To switch, replace the active block with one of the examples below.
 model:
-  type: "gradient_boosting"
-  params: {n_estimators: 100, learning_rate: 0.1, random_state: 42}
+  type: "adaboost"
+  params: {n_estimators: 100, learning_rate: 0.5, random_state: 42}
 
   # Other models' params, to swap in. class_weight "balanced" weights each class by 1 / its frequency
   # dummy:                  {strategy: most_frequent}   # the no-model floor
   # logistic_regression:    {max_iter: 2000, class_weight: balanced}
   # naive_bayes:            {}
   # decision_tree:          {random_state: 42, class_weight: balanced}
-  # random_forest:          {n_estimators: 200, random_state: 42, n_jobs: -1, class_weight: balanced}
   # oblique_random_forest:  {n_estimators: 200, random_state: 42, n_jobs: -1}
+  # random_forest:          {n_estimators: 200, random_state: 42, n_jobs: -1, class_weight: balanced}
   # adaboost:               {n_estimators: 100, learning_rate: 0.5, random_state: 42}
-  # hist_gradient_boosting: {random_state: 42, class_weight: balanced}
-  # gradient_boosting:      {n_estimators: 100, learning_rate: 0.1, random_state: 42}
-
+  # gradient_boosting:      {random_state: 42}          # has no class_weight
+  # hist_gradient_boosting: {random_state: 42}          # class_weight: balanced would push towards more
+  #                                                     # positive predictions = more false positives
+  # xgboost:                {n_estimators: 200, learning_rate: 0.1, max_depth: 3, random_state: 42, n_jobs: -1}
+  #                         # no scale_pos_weight: it would push towards more positives = more false positives
 
 tuning:
-  enabled: true
+  enabled: false
   n_trials: 30
   n_splits: 5                                       # folds that score each candidate
   random_state: 42                                  # seeds the sampler and those folds
@@ -118,25 +125,46 @@ tuning:
     oblique_random_forest:
       model__estimator__tree__max_depth: {type: int, low: 2, high: 30}
       model__estimator__tree__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
-      model__estimator__project__n_components: {type: int, low: 3, high: 10}
+      model__estimator__project__n_components: {type: int, low: 3, high: 10}   # <= number of features
     adaboost:
       model__estimator__max_depth: {type: int, low: 1, high: 8}
       model__n_estimators: {type: int, low: 25, high: 400, log: true}
       model__learning_rate: {type: float, low: 0.01, high: 1.0, log: true}
-    naive_bayes:
-      model__var_smoothing: {type: float, low: 0.000000000001, high: 0.1, log: true}
-    hist_gradient_boosting:
-      model__max_iter: {type: int, low: 25, high: 500, log: true}
-      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
-      model__max_leaf_nodes: {type: int, low: 2, high: 63, log: true}
-      model__min_samples_leaf: {type: int, low: 5, high: 200, log: true}
-      model__l2_regularization: {type: float, low: 0.000001, high: 10.0, log: true}
     gradient_boosting:
       model__n_estimators: {type: int, low: 25, high: 500, log: true}
       model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
       model__max_depth: {type: int, low: 1, high: 6}
       model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
       model__subsample: {type: float, low: 0.5, high: 1.0}
+    hist_gradient_boosting:
+      model__max_iter: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_leaf_nodes: {type: int, low: 2, high: 63, log: true}
+      model__min_samples_leaf: {type: int, low: 5, high: 200, log: true}
+      model__l2_regularization: {type: float, low: 0.000001, high: 10.0, log: true}
+    xgboost:
+      model__n_estimators: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_depth: {type: int, low: 1, high: 8}
+      model__min_child_weight: {type: float, low: 1.0, high: 50.0, log: true}
+      model__subsample: {type: float, low: 0.5, high: 1.0}
+      model__colsample_bytree: {type: float, low: 0.5, high: 1.0}
+      model__reg_lambda: {type: float, low: 0.001, high: 20.0, log: true}
+      model__reg_alpha: {type: float, low: 0.000001, high: 10.0, log: true}
+      model__gamma: {type: float, low: 0.000001, high: 5.0, log: true}
+    naive_bayes:
+      model__var_smoothing: {type: float, low: 0.000000000001, high: 0.1, log: true}
+
+# Week 8: feature selection, a step between preprocessing and the model, fitted on training rows only.
+# Three models vote (random forest, gradient boosting, L1 logistic regression); a feature is kept
+# if it gets at least min_votes votes. When tuning is on, min_votes is tuned too (search_space).
+# Run 1: enabled false (XGBoost untuned vs tuned).  Run 2: enabled true (with feature selection).
+feature_selection:
+  enabled: true
+  min_votes: 2                      # used when not tuned
+  random_state: 42
+  search_space:
+    select__min_votes: {type: int, low: 1, high: 3}
 
 output:
   results_dir: "results"            # each run's full report: results/<model>/run_<timestamp>.txt

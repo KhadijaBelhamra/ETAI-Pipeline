@@ -24,6 +24,7 @@ from src.model import build_pipeline
 from src.evaluate import (build_scorers, cross_validate_pipeline, cv_report, oof_classification_report,
                           fairness_report)
 from src.tuning import tune_pipeline, nested_cross_validate, tuning_report
+from src.predict import predict_new_rows
 from src.results import save_run, save_scores
 
 
@@ -45,6 +46,13 @@ def main():
 
     mnar_sources = config["preprocessing"].get("mnar_indicator_sources", [])
     X, y, extras = split_features_target(df_clean, config["data"], mnar_sources)
+
+    # A column that is in no feature list is silently left out of the model: say so.
+    prep = config["preprocessing"]
+    used = (set(prep["numeric_features"]) | set(engineered) | set(prep["categorical_features"])
+            | {f"{c}_was_missing" for c in mnar_sources})
+    unused = [c for c in X.columns if c not in used]
+    print(f"Model features: {len(used & set(X.columns))}   |   columns not used: {unused if unused else 'none'}")
 
     # From here on, every decision uses the development set only; the test set stays locked.
     X_dev, X_test, y_dev, y_test, extras_dev, extras_test = split_dev_test(
@@ -122,7 +130,8 @@ def main():
     for name in metrics:
         print(f"  {name:<18s} {final_scores[name].mean():.3f} ± {final_scores[name].std(ddof=1):.3f}")
     report += "\n\n" + oof_classification_report(y_dev, oof_proba)
-    report += "\n" + fairness_report(y_dev, oof_proba, extras_dev, sensitive_attr=config["data"]["sensitive_attr"])
+    report += "\n" + fairness_report(y_dev, oof_proba, extras_dev, sensitive_attr=config["data"]["sensitive_attr"],
+                                      fairness_config=config["data"].get("fairness"))
 
     pipeline.fit(X_dev, y_dev)
     refit = f"Final model: {model_type} refit on all {len(X_dev)} development rows."
@@ -130,6 +139,11 @@ def main():
         all_features = pipeline.named_steps["prep"].get_feature_names_out()
         kept = pipeline.named_steps["select"].get_feature_names_out(all_features)
         refit += f"\nFeatures kept: {len(kept)} of {len(all_features)}: {', '.join(kept)}"
+    if config["data"].get("predict_path"):
+        predictions = predict_new_rows(
+            pipeline, config,
+            os.path.join(config.get("output", {}).get("results_dir", "results"), model_type, f"predictions_{run}.csv"))
+        refit += f"\nPredictions for {config['data']['predict_path']}: {predictions}"
     report += "\n" + refit + "\n"
 
     row = {"run": run, "data": config["data"]["path"], "model": model_type, "tuned": tuning_enabled,

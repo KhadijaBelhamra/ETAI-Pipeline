@@ -1,5 +1,4 @@
-"""
-Preprocessing: from raw data to model-ready data.
+"""Preprocessing: from raw data to model-ready data.
 
 Two kinds of steps, kept apart on purpose:
   - Learn-nothing steps (`clean_dataset`, `split_features_target`): safe on the whole
@@ -8,7 +7,7 @@ Two kinds of steps, kept apart on purpose:
     ColumnTransformer, which sits in the model Pipeline. They are re-fitted on each CV
     fold's training part and never see the validation fold or the locked test set.
 
-`sensitive_attr` (race) is kept out of the model features and returned separately,
+`sensitive_attr` (e.g. race, sex) is kept out of the model features and returned separately,
 so it can be used for fairness auditing (see src/evaluate.py).
 """
 import numpy as np
@@ -70,6 +69,13 @@ def clean_dataset(df: pd.DataFrame, diagnostics_config: dict) -> pd.DataFrame:
     for col in diagnostics_config.get("numeric_text_columns", []):
         if col in out.columns:
             out[col] = pd.to_numeric(out[col].replace(list(placeholder_tokens), np.nan), errors="coerce")
+
+    # Text columns whose placeholder tokens (e.g. "?") mean "unknown", whether or not the column
+    # has category-standardisation rules: whitespace is stripped, the placeholder becomes NaN.
+    for col in diagnostics_config.get("placeholder_columns", []):
+        if col in out.columns:
+            text = out[col].where(out[col].isna(), out[col].astype(str).str.strip())
+            out[col] = text.where(~text.isin(placeholder_tokens), np.nan)
 
     flag_invalid_values(out, diagnostics_config.get("validity_rules", {}))
 
@@ -145,7 +151,8 @@ def add_engineered_features(df: pd.DataFrame, feature_names: list) -> pd.DataFra
 
 def split_features_target(df: pd.DataFrame, data_config: dict, mnar_indicator_sources: list):
     """
-    Return (X, y, extras). `extras` holds the sensitive attribute and COMPAS's score_text
+    Return (X, y, extras). `extras` holds the sensitive attribute and, if the config names one
+    (`data.fairness.benchmark_column`, e.g. COMPAS's score_text), the benchmark's column, both
     for the fairness report. `y` is `None` when the target column is absent.
     """
     target = data_config["target"]
@@ -155,7 +162,8 @@ def split_features_target(df: pd.DataFrame, data_config: dict, mnar_indicator_so
     df = add_missingness_indicators(df, mnar_indicator_sources)
     y = df[target] if target in df.columns else None
 
-    extras_cols = [c for c in [sensitive_attr, "score_text"] if c in df.columns]
+    benchmark_column = (data_config.get("fairness") or {}).get("benchmark_column")
+    extras_cols = [c for c in [sensitive_attr, benchmark_column] if c and c in df.columns]
     extras = df[extras_cols].copy() if extras_cols else None
 
     always_drop = set(drop_columns) | {target, sensitive_attr}

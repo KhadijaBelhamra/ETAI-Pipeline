@@ -92,25 +92,38 @@ def oof_classification_report(y_true, oof_proba, threshold: float = 0.5) -> str:
 
 
 def fairness_report(y_true, oof_proba, extras: pd.DataFrame, sensitive_attr: str = "race",
-                    threshold: float = 0.5) -> str:
+                    threshold: float = 0.5, fairness_config: dict = None) -> str:
     """
-    False positive rate (share of people who did not reoffend but were predicted to) per
-    group of `sensitive_attr`, for the model's out-of-fold predictions and for COMPAS's own
-    score (`score_text` other than "Low" counts as predicted to reoffend), on the same rows.
-    Rows with an unknown group are reported as "unknown". A simple check, not a full audit.
+    False positive rate (share of people whose true label is 0 but who were predicted 1) per
+    group of `sensitive_attr`, for the model's out-of-fold predictions and, if configured, for
+    a benchmark's own predictions on the same rows. Rows with an unknown group are reported as
+    "unknown". A simple check, not a full audit.
+
+    `fairness_config` is config.yaml's `data.fairness` section (all keys optional):
+      false_positive_definition: the sentence ending "(share of people who ...)"
+      benchmark_column / benchmark_negative_value / benchmark_label: a column whose value
+        `benchmark_negative_value` means "predicted 0" (COMPAS: score_text, "Low").
     """
+    cfg = fairness_config or {}
+    definition = cfg.get("false_positive_definition", "have true label 0, but were predicted 1")
+    benchmark_column = cfg.get("benchmark_column")
+    benchmark_label = cfg.get("benchmark_label", "Benchmark")
+
     df = extras.copy()
     df[sensitive_attr] = df[sensitive_attr].astype(object).fillna("unknown")
     df["y_true"] = pd.Series(y_true).values
     df["y_pred_model"] = (oof_proba >= threshold).astype(int)
-    df["y_pred_compas"] = (df["score_text"] != "Low").astype(int)
+    predictors = [("Our model", "y_pred_model")]
+    if benchmark_column and benchmark_column in df.columns:
+        df["y_pred_benchmark"] = (df[benchmark_column] != cfg.get("benchmark_negative_value")).astype(int)
+        predictors.append((benchmark_label, "y_pred_benchmark"))
 
     lines = [
         f"False positive rate by {sensitive_attr} (development set, out-of-fold)",
-        "(share of people who did NOT reoffend, but were predicted to)",
+        f"(share of people who {definition})",
         "",
     ]
-    for label, col in [("Our model", "y_pred_model"), ("COMPAS's own score", "y_pred_compas")]:
+    for label, col in predictors:
         lines.append(f"  {label}:")
         for group, g in df.groupby(sensitive_attr):
             negatives = g[g["y_true"] == 0]

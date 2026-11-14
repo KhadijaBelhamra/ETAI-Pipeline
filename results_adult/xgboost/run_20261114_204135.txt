@@ -1,0 +1,66 @@
+Run: 20261114_204135
+Model: xgboost  params={'n_estimators': 200, 'learning_rate': 0.1, 'max_depth': 3, 'random_state': 42, 'n_jobs': -1}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: []
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1', 'roc_auc', 'average_precision']  selection metric: f1
+Feature selection: VoteSelector, min_votes=2 (before tuning)
+Tuning: off
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {'n_estimators': 200, 'learning_rate': 0.1, 'max_depth': 3, 'random_state': 42, 'n_jobs': -1}
+
+Cross-validation (5 stratified folds, selection metric: f1)
+
+ fold  train  validation    gap  accuracy  balanced_accuracy  precision  recall    f1  roc_auc  average_precision
+    1  0.729       0.706  0.023     0.869              0.797      0.759   0.659 0.706    0.914              0.804
+    2  0.720       0.644  0.076     0.856              0.749      0.791   0.543 0.644    0.916              0.799
+    3  0.702       0.722 -0.020     0.879              0.803      0.803   0.657 0.722    0.935              0.845
+    4  0.729       0.643  0.087     0.846              0.754      0.723   0.578 0.643    0.890              0.763
+    5  0.721       0.692  0.029     0.863              0.787      0.747   0.643 0.692    0.904              0.794
+
+                   mean   std
+accuracy          0.863 0.013
+balanced_accuracy 0.778 0.025
+precision         0.765 0.033
+recall            0.616 0.052
+f1                0.681 0.036
+roc_auc           0.912 0.017
+average_precision 0.801 0.029
+
+f1: train-validation gap mean = +0.039
+
+No-model floor (dummy, same folds): f1 = 0.000
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         3432          219
+true 1          441          708
+
+              precision    recall  f1-score   support
+
+           0       0.89      0.94      0.91      3651
+           1       0.76      0.62      0.68      1149
+
+    accuracy                           0.86      4800
+   macro avg       0.82      0.78      0.80      4800
+weighted avg       0.86      0.86      0.86      4800
+
+False positive rate by sex (development set, out-of-fold)
+(share of people who earn 50K or less, but were predicted to earn more)
+
+  Our model:
+    Female               FPR = 0.03  (n=1390)
+    Male                 FPR = 0.08  (n=2261)
+
+Final model: xgboost refit on all 4800 development rows.
+Features kept: 8 of 36: numeric__age, numeric__education_num, numeric__capital_gain, numeric__capital_loss, numeric__hours_per_week, categorical__marital_status, categorical__occupation, categorical__relationship
+Predictions for data/adult_new.csv: results_adult/xgboost/predictions_20261114_204135.csv
+
+Scoreboard:
+            run             model  tuned  engineered feature_selection    f1   std  untuned  floor
+20261114_204135           xgboost  False           0       min_votes 2 0.681 0.036    0.681  0.000
+20261114_202400 gradient_boosting  False           0       min_votes 2 0.675 0.035    0.675  0.000
+20261114_202719 gradient_boosting   True           0       min_votes 1 0.661 0.032    0.675  0.000

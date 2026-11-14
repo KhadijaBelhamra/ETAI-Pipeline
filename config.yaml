@@ -6,6 +6,12 @@ data:
   sensitive_attr: "race"          # excluded from model features, used only to audit fairness
   # Never used as model features: row id and COMPAS's own score.
   drop_columns: ["id", "decile_score", "score_text"]
+  # Fairness report wording and benchmark. COMPAS's own score is predicted "0" when it is "Low".
+  fairness:
+    false_positive_definition: "did NOT reoffend, but were predicted to"
+    benchmark_column: "score_text"
+    benchmark_negative_value: "Low"
+    benchmark_label: "COMPAS's own score"
 
 # Locked final test set (stratified). Never used to fit, tune or choose anything.
 # Do not change these values: a new seed would give a different, partly "seen" test set.
@@ -34,6 +40,9 @@ diagnostics:
   id_column: "id"
   # Columns that load as text only because of placeholder tokens.
   numeric_text_columns: ["priors_count", "prior_offenses"]
+  # Text columns where a placeholder token means "unknown" (needed when the column has no
+  # canonical_categories rules below; COMPAS doesn't need it).
+  placeholder_columns: []
   # "nan" is listed because the category cleanup turns real NaNs into the string "nan".
   placeholder_tokens: ["-", "?", "n/a", "N/A", "na", "NA", "", "nan"]
   validity_rules:
@@ -87,8 +96,8 @@ preprocessing:
 #        | "oblique_random_forest" | "adaboost" | "gradient_boosting" | "hist_gradient_boosting" | "xgboost"
 # To switch, replace the active block with one of the examples below.
 model:
-  type: "adaboost"
-  params: {n_estimators: 100, learning_rate: 0.5, random_state: 42}
+  type: "xgboost"
+  params: {n_estimators: 200, learning_rate: 0.1, max_depth: 3, random_state: 42, n_jobs: -1}
 
   # Other models' params, to swap in. class_weight "balanced" weights each class by 1 / its frequency
   # dummy:                  {strategy: most_frequent}   # the no-model floor
@@ -160,7 +169,7 @@ tuning:
 # if it gets at least min_votes votes. When tuning is on, min_votes is tuned too (search_space).
 # Run 1: enabled false (XGBoost untuned vs tuned).  Run 2: enabled true (with feature selection).
 feature_selection:
-  enabled: true
+  enabled: false
   min_votes: 2                      # used when not tuned
   random_state: 42
   search_space:

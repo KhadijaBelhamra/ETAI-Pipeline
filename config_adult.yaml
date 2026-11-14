@@ -1,0 +1,156 @@
+# Pipeline configuration for option A (week 9): Adult income, "does this person earn > 50K USD a year?"
+# Run it with:  python main.py config_adult.yaml      (python main.py alone still runs COMPAS)
+
+data:
+  path: "data/adult_train.csv"
+  predict_path: "data/adult_new.csv"      # 2000 new people (no target): predicted after the final refit
+  target: "income_over_50k"
+  sensitive_attr: "sex"                   # audited by the fairness report, never a model feature
+  # Never model features: row id; fnlwgt (census sampling weight, not a trait of the person);
+  # education (identical to education_num, which keeps the order); race (decision: kept out of the
+  # features like the audited attribute, as in the COMPAS runs. Remove it from this list to allow it).
+  drop_columns: ["id", "fnlwgt", "education", "race"]
+  # Fairness report wording. No benchmark model here (COMPAS had its own score).
+  fairness:
+    false_positive_definition: "earn 50K or less, but were predicted to earn more"
+
+# Locked final test set (stratified). Never used to fit, tune or choose anything.
+test_set:
+  size: 0.2
+  random_state: 42
+
+# Stratified k-fold cross-validation on the development set.
+cv:
+  n_splits: 5
+  shuffle: true
+  random_state: 42
+  # Targets (all in the same run): roc_auc >= 0.90, accuracy >= 0.855, f1 >= 0.66.
+  metrics: ["accuracy", "balanced_accuracy", "precision", "recall", "f1", "roc_auc", "average_precision"]
+  # What tuning maximises and the scoreboard ranks by. Here there is no cost argument for
+  # preferring precision, and F1 is the target that needs the most work (24% are positive).
+  selection_metric: "f1"
+  n_jobs: 1
+
+# Cleaning rules from the diagnosis of the Adult data.
+diagnostics:
+  id_column: "id"
+  numeric_text_columns: []
+  # "?" means "unknown" in workclass, occupation and native_country: it is a missing value
+  # written as text. "nan" is listed because the category cleanup turns real NaNs into "nan".
+  placeholder_tokens: ["?", "-", "n/a", "N/A", "na", "NA", "", "nan"]
+  placeholder_columns: ["workclass", "occupation", "native_country"]
+  # Rules protect future data. Note age min 17, not 18: 74 people are 17 and valid.
+  validity_rules:
+    age: {min: 17, max: 90}
+    hours_per_week: {min: 1, max: 99}
+    capital_gain: {min: 0}
+    capital_loss: {min: 0}
+  # capital_gain 99999 is the census top code, a real value: no rule on its maximum.
+  canonical_categories: {}
+  redundant_columns: []
+
+# Preprocessing recipe. Fitted on training rows only, inside the model Pipeline.
+preprocessing:
+  encoder: "target"      # "onehot" | "ordinal" | "count" | "target"   (target: native_country has 41 values)
+  scaler: "robust"       # "none" | "standard" | "minmax" | "robust"
+  # v01-v25 are undocumented: all kept as features, feature selection decides.
+  numeric_features: ["age", "education_num", "capital_gain", "capital_loss", "hours_per_week",
+                     "v01", "v02", "v03", "v04", "v05", "v06", "v07", "v08", "v09", "v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18"]
+  categorical_features: ["workclass", "marital_status", "occupation", "relationship", "native_country",
+                         "v19", "v20", "v21", "v22", "v23", "v24", "v25"]
+  engineered_features: []   # the COMPAS ones need COMPAS columns
+  # workclass and occupation are missing for the same people, who earn > 50K about half as often:
+  # being missing carries information, so a flag is added (one is enough: same people).
+  mnar_indicator_sources: ["workclass"]
+  random_state: 42
+  imputation:
+    numeric_strategy: "median"
+    categorical_strategy: "most_frequent"
+
+# Model: "dummy" | "logistic_regression" | "naive_bayes" | "decision_tree" | "random_forest"
+#        | "oblique_random_forest" | "adaboost" | "gradient_boosting" | "hist_gradient_boosting" | "xgboost"
+# To switch, replace the active block with one of the examples below.
+model:
+  type: "xgboost"
+  params: {n_estimators: 200, learning_rate: 0.1, max_depth: 3, random_state: 42, n_jobs: -1}
+
+  # Other models' params, to swap in. class_weight "balanced" weights each class by 1 / its frequency
+  # dummy:                  {strategy: most_frequent}   # the no-model floor
+  # logistic_regression:    {max_iter: 2000, class_weight: balanced}
+  # naive_bayes:            {}
+  # decision_tree:          {random_state: 42, class_weight: balanced}
+  # oblique_random_forest:  {n_estimators: 200, random_state: 42, n_jobs: -1}
+  # random_forest:          {n_estimators: 200, random_state: 42, n_jobs: -1, class_weight: balanced}
+  # adaboost:               {n_estimators: 100, learning_rate: 0.5, random_state: 42}
+  # gradient_boosting:      {random_state: 42}          # has no class_weight
+  # hist_gradient_boosting: {random_state: 42}          # class_weight: balanced would push towards more
+  #                                                     # positive predictions = more false positives
+  # xgboost:                {n_estimators: 200, learning_rate: 0.1, max_depth: 3, random_state: 42, n_jobs: -1}
+  #                         # no scale_pos_weight: it would push towards more positives = more false positives
+
+tuning:
+  enabled: true                                   # false to get things working; true for the final runs
+  n_trials: 30
+  n_splits: 5                                       # folds that score each candidate
+  random_state: 42                                  # seeds the sampler and those folds
+  # Keys are Pipeline parameter names. Types: int / float (low, high, log) or categorical (choices).
+  # Ensembles take minutes per run: use a small n_trials while testing.
+  search_spaces:
+    logistic_regression:
+      model__C: {type: float, low: 0.001, high: 100.0, log: true}
+    decision_tree:
+      model__max_depth: {type: int, low: 1, high: 20}
+      model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__criterion: {type: categorical, choices: ["gini", "entropy"]}
+    random_forest:
+      model__max_depth: {type: int, low: 2, high: 30}
+      model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__max_features: {type: categorical, choices: ["sqrt", 0.5, 1.0]}
+    oblique_random_forest:
+      model__estimator__tree__max_depth: {type: int, low: 2, high: 30}
+      model__estimator__tree__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__estimator__project__n_components: {type: int, low: 3, high: 10}   # <= number of features
+    adaboost:
+      model__estimator__max_depth: {type: int, low: 1, high: 8}
+      model__n_estimators: {type: int, low: 25, high: 400, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 1.0, log: true}
+    gradient_boosting:
+      model__n_estimators: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_depth: {type: int, low: 1, high: 6}
+      model__min_samples_leaf: {type: int, low: 1, high: 200, log: true}
+      model__subsample: {type: float, low: 0.5, high: 1.0}
+    hist_gradient_boosting:
+      model__max_iter: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_leaf_nodes: {type: int, low: 2, high: 63, log: true}
+      model__min_samples_leaf: {type: int, low: 5, high: 200, log: true}
+      model__l2_regularization: {type: float, low: 0.000001, high: 10.0, log: true}
+    xgboost:
+      model__n_estimators: {type: int, low: 25, high: 500, log: true}
+      model__learning_rate: {type: float, low: 0.01, high: 0.5, log: true}
+      model__max_depth: {type: int, low: 1, high: 8}
+      model__min_child_weight: {type: float, low: 1.0, high: 50.0, log: true}
+      model__subsample: {type: float, low: 0.5, high: 1.0}
+      model__colsample_bytree: {type: float, low: 0.5, high: 1.0}
+      model__reg_lambda: {type: float, low: 0.001, high: 20.0, log: true}
+      model__reg_alpha: {type: float, low: 0.000001, high: 10.0, log: true}
+      model__gamma: {type: float, low: 0.000001, high: 5.0, log: true}
+    naive_bayes:
+      model__var_smoothing: {type: float, low: 0.000000000001, high: 0.1, log: true}
+
+# Week 8: feature selection, a step between preprocessing and the model, fitted on training rows only.
+# Three models vote (random forest, gradient boosting, L1 logistic regression); a feature is kept
+# if it gets at least min_votes votes. When tuning is on, min_votes is tuned too (search_space).
+# Adult: on, since v01-v25 are undocumented and selection decides which to keep.
+feature_selection:
+  enabled: true
+  min_votes: 2                      # used when not tuned
+  random_state: 42
+  search_space:
+    select__min_votes: {type: int, low: 1, high: 3}
+
+output:
+  results_dir: "results_adult"      # each run's full report: results_adult/<model>/run_<timestamp>.txt
+                                    # (and predictions for the new people: predictions_<timestamp>.csv)
+  scoreboard: "results_adult/runs.csv"    # one row per run, ranked on screen after every run

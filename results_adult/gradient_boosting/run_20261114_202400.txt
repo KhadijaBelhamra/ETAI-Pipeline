@@ -1,0 +1,64 @@
+Run: 20261114_202400
+Model: gradient_boosting  params={'random_state': 42}
+Preprocessing: encoder=target  scaler=robust
+Engineered features: []
+CV: 5 stratified folds  shuffle=True  random_state=42
+Metrics: ['accuracy', 'balanced_accuracy', 'precision', 'recall', 'f1', 'roc_auc', 'average_precision']  selection metric: f1
+Feature selection: VoteSelector, min_votes=2 (before tuning)
+Tuning: off
+Locked test set: size=0.2  random_state=42  (not evaluated)
+============================================================
+
+Hyperparameters from config.yaml: {'random_state': 42}
+
+Cross-validation (5 stratified folds, selection metric: f1)
+
+ fold  train  validation    gap  accuracy  balanced_accuracy  precision  recall    f1  roc_auc  average_precision
+    1  0.706       0.689  0.016     0.868              0.781      0.783   0.616 0.689    0.910              0.796
+    2  0.704       0.635  0.069     0.854              0.743      0.792   0.530 0.635    0.913              0.788
+    3  0.698       0.716 -0.018     0.876              0.799      0.794   0.652 0.716    0.937              0.849
+    4  0.721       0.642  0.079     0.847              0.753      0.729   0.574 0.642    0.892              0.765
+    5  0.700       0.693  0.007     0.863              0.789      0.745   0.648 0.693    0.907              0.801
+
+                   mean   std
+accuracy          0.861 0.011
+balanced_accuracy 0.773 0.024
+precision         0.769 0.030
+recall            0.604 0.052
+f1                0.675 0.035
+roc_auc           0.912 0.016
+average_precision 0.800 0.031
+
+f1: train-validation gap mean = +0.031
+
+No-model floor (dummy, same folds): f1 = 0.000
+
+Out-of-fold predictions, development set (threshold 0.5):
+
+        predicted 0  predicted 1
+true 0         3441          210
+true 1          455          694
+
+              precision    recall  f1-score   support
+
+           0       0.88      0.94      0.91      3651
+           1       0.77      0.60      0.68      1149
+
+    accuracy                           0.86      4800
+   macro avg       0.83      0.77      0.79      4800
+weighted avg       0.86      0.86      0.86      4800
+
+False positive rate by sex (development set, out-of-fold)
+(share of people who earn 50K or less, but were predicted to earn more)
+
+  Our model:
+    Female               FPR = 0.02  (n=1390)
+    Male                 FPR = 0.08  (n=2261)
+
+Final model: gradient_boosting refit on all 4800 development rows.
+Features kept: 8 of 36: numeric__age, numeric__education_num, numeric__capital_gain, numeric__capital_loss, numeric__hours_per_week, categorical__marital_status, categorical__occupation, categorical__relationship
+Predictions for data/adult_new.csv: results_adult/gradient_boosting/predictions_20261114_202400.csv
+
+Scoreboard:
+            run             model  tuned  engineered feature_selection    f1   std  untuned  floor
+20261114_202400 gradient_boosting  False           0       min_votes 2 0.675 0.035    0.675  0.000

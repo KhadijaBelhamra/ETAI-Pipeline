@@ -64,15 +64,18 @@ preprocessing:
   mnar_indicator_sources: ["workclass"]
   random_state: 42
   imputation:
-    numeric_strategy: "median"
+    numeric_strategy: "median"                      # median | mean | knn | iterative | random_forest
     categorical_strategy: "most_frequent"
+    n_neighbors: 5                                  # knn
+    max_iter: 10                                    # iterative, random_forest
+    n_estimators: 50                                # random_forest (trees per column)
 
 # Model: "dummy" | "logistic_regression" | "naive_bayes" | "decision_tree" | "random_forest"
 #        | "oblique_random_forest" | "adaboost" | "gradient_boosting" | "hist_gradient_boosting" | "xgboost"
 # To switch, replace the active block with one of the examples below.
 model:
-  type: "xgboost"
-  params: {n_estimators: 200, learning_rate: 0.1, max_depth: 3, random_state: 42, n_jobs: -1}
+  type: "gradient_boosting"
+  params: {random_state: 42}
 
   # Other models' params, to swap in. class_weight "balanced" weights each class by 1 / its frequency
   # dummy:                  {strategy: most_frequent}   # the no-model floor
@@ -89,7 +92,7 @@ model:
   #                         # no scale_pos_weight: it would push towards more positives = more false positives
 
 tuning:
-  enabled: true                                   # false to get things working; true for the final runs
+  enabled: false                                   # false to get things working; true for the final runs
   n_trials: 30
   n_splits: 5                                       # folds that score each candidate
   random_state: 42                                  # seeds the sampler and those folds
@@ -154,3 +157,4 @@ output:
   results_dir: "results_adult"      # each run's full report: results_adult/<model>/run_<timestamp>.txt
                                     # (and predictions for the new people: predictions_<timestamp>.csv)
   scoreboard: "results_adult/runs.csv"    # one row per run, ranked on screen after every run
+  model_path: "models/model_adult.joblib"           # the final fitted pipeline, used by predict.py (overwritten each run)

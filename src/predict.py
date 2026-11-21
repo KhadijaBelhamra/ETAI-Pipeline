@@ -1,33 +1,48 @@
-"""Predicting people the model has never seen (a file without the target column)."""
-import os
+"""
+Predicts new data with the model saved by `main.py`:
 
+    python predict.py data/compas_new_people.csv predictions.csv
+    python predict.py data/adult_new.csv adult_predictions.csv --config config_adult.yaml
+
+new CSV -> the same cleaning as training (no rows dropped) -> engineered features -> the saved
+pipeline -> one row per input row: id, probability, prediction.
+"""
+import argparse
+
+import joblib
 import pandas as pd
+import yaml
 
-from src.data import load_data
 from src.preprocessing import add_engineered_features, clean_dataset, split_features_target
 
 
-def predict_new_rows(pipeline, config: dict, out_path: str, threshold: float = 0.5) -> str:
+def predict(df: pd.DataFrame, pipeline, config: dict, threshold: float = 0.5) -> pd.DataFrame:
     """
-    Predicts every row of `config["data"]["predict_path"]` with the fitted `pipeline` and saves
-    `<id>, probability, prediction` to `out_path`. Same cleaning, engineered features and
-    feature split as the training data, but no duplicate removal and no row is ever dropped:
-    rows out = rows in. Returns the path.
+    Returns the id, the probability of the positive class and the prediction (at `threshold`) for
+    every row of `df`. Rows are never dropped (no duplicate removal): rows out = rows in.
     """
-    data_config = config["data"]
-    id_column = config["diagnostics"]["id_column"]
-    raw = load_data(data_config["predict_path"])
+    clean = clean_dataset(df, config["diagnostics"])
+    clean = add_engineered_features(clean, config["preprocessing"].get("engineered_features", []))
+    X, _, _ = split_features_target(clean, config["data"], config["preprocessing"].get("mnar_indicator_sources", []))
+    probability = pipeline.predict_proba(X)[:, 1]
+    predictions = pd.DataFrame({"id": df[config["diagnostics"]["id_column"]].values,
+                                "probability": probability,
+                                "prediction": (probability >= threshold).astype(int)})
+    if len(predictions) != len(df):
+        raise RuntimeError(f"{len(df)} rows in, {len(predictions)} rows out")
+    return predictions
 
-    cleaned = clean_dataset(raw, config["diagnostics"])
-    cleaned = add_engineered_features(cleaned, config["preprocessing"].get("engineered_features", []))
-    X_new, _, _ = split_features_target(cleaned, data_config,
-                                        config["preprocessing"].get("mnar_indicator_sources", []))
-    probability = pipeline.predict_proba(X_new)[:, 1]
 
-    out = pd.DataFrame({id_column: raw[id_column].values, "probability": probability,
-                        "prediction": (probability >= threshold).astype(int)})
-    if len(out) != len(raw):
-        raise RuntimeError(f"{len(raw)} rows in, {len(out)} rows out")
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    out.to_csv(out_path, index=False)
-    return out_path
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Predict a CSV with the model saved by main.py.")
+    parser.add_argument("input", help="CSV with the same columns as the training data (no target needed)")
+    parser.add_argument("output", nargs="?", default="predictions.csv", help="where to write the predictions")
+    parser.add_argument("--config", default="config.yaml", help="the config the model was trained with")
+    args = parser.parse_args()
+
+    with open(args.config) as f:
+        config = yaml.safe_load(f)
+    pipeline = joblib.load(config["output"]["model_path"])
+    predictions = predict(pd.read_csv(args.input), pipeline, config)
+    predictions.to_csv(args.output, index=False)
+    print(f"{len(predictions)} rows predicted -> {args.output}")

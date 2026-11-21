@@ -87,10 +87,13 @@ preprocessing:
                         "has_juvenile_record", "has_juvenile_felony", "young_with_priors"]
   # Columns that also get a "<col>_was_missing" flag (MNAR-diagnosed).
   mnar_indicator_sources: ["priors_count", "c_charge_degree"]
-  random_state: 42       # seed for the target encoder's internal cross-fitting
+  random_state: 42       # seed for the target encoder's folds and the model-based imputers
   imputation:
-    numeric_strategy: "median"
+    numeric_strategy: "median"                      # median | mean | knn | iterative | random_forest
     categorical_strategy: "most_frequent"
+    n_neighbors: 5                                  # knn
+    max_iter: 10                                    # iterative, random_forest
+    n_estimators: 50                                # random_forest (trees per column)
 
 # Model: "dummy" | "logistic_regression" | "naive_bayes" | "decision_tree" | "random_forest"
 #        | "oblique_random_forest" | "adaboost" | "gradient_boosting" | "hist_gradient_boosting" | "xgboost"
@@ -178,3 +181,4 @@ feature_selection:
 output:
   results_dir: "results"            # each run's full report: results/<model>/run_<timestamp>.txt
   scoreboard: "results/runs.csv"    # one row per run, ranked on screen after every run
+  model_path: "models/model.joblib"           # the final fitted pipeline, used by predict.py (overwritten each run)

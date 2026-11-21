@@ -15,7 +15,8 @@ go on.
 
 ```
 .
-├── main.py                # entry point: run the whole pipeline
+├── main.py                # entry point: train, evaluate and save the model
+├── predict.py             # entry point: predict a new CSV with the saved model (week 10)
 ├── run_experiments.py      # runs a week's set of experiments and prints the scoreboard
 ├── config.yaml             # all tunable settings live here (COMPAS)
 ├── config_adult.yaml       # same, for the Adult income data (week 9)
@@ -27,12 +28,13 @@ go on.
 │   ├── model.py            # model + pipeline construction (forests, boosting incl. XGBoost, VoteSelector feature selection)
 │   ├── tuning.py           # Optuna tuning and nested cross-validation
 │   ├── evaluate.py         # cross-validation, several metrics (incl. F-beta), fairness check
-│   ├── predict.py          # predicts a file of new people (no target)
 │   └── results.py          # saves each run's report and the scoreboard to disk
 ├── results/                # COMPAS runs, created automatically
 ├── results_adult/          # Adult runs, created automatically
+├── models/                 # created automatically: model.joblib, the final fitted pipeline (not tracked in git)
 └── data/
     ├── compas_two_year_recidivism.csv
+    ├── compas_new_people.csv    # 20 new people, no target, for predict.py
     ├── adult_train.csv, adult_new.csv
     └── README.md            # problem description + full data dictionary
 ```
@@ -50,6 +52,7 @@ This table is updated after each practical class, so you can always see what cha
 | 7 | **Boosting:** `gradient_boosting` (scikit-learn `GradientBoostingClassifier`) and `hist_gradient_boosting` (`HistGradientBoostingClassifier`) registered in `src/model.py`, each with an Optuna search space in the YAML (number of rounds, learning rate, tree size, and subsampling / L2 regularisation), next to AdaBoost from week 5. **New metrics:** every run now reports accuracy, balanced accuracy, precision, recall, F1, F-beta, ROC-AUC and PR-AUC. Because a false positive (predicting that someone will reoffend when they will not) is much more costly than a false negative, the **selection metric is `fbeta_0.5`**: F-beta with beta < 1 weights precision more than recall (beta = 0.5: twice as much), so tuning and the scoreboard favour models that flag fewer people wrongly. F1 is reported as the balanced reference, and ROC-AUC / PR-AUC as threshold-free checks (they do not depend on the 0.5 cut-off). The six engineered features and the per-model `results/<model>/` folders are kept. | **Nested-CV F-beta 0.5 (tuned, 30 trials; floor 0.000):** gradient boosting 0.647, oblique forest 0.647, AdaBoost 0.646, logistic regression 0.642, HistGradientBoosting 0.640, random forest 0.639, decision tree 0.628, naive Bayes 0.611 (not tuned). <br><br>**Boosting:** gradient boosting ranks first (best ROC-AUC, 0.728) but is not significantly better than the week 5 models (paired test, p = 0.27-0.95); it only clearly beats the decision tree and the untuned naive Bayes. <br><br>**Tuning on F-beta 0.5 instead of accuracy:** accuracy unchanged (-0.002 to +0.001) and the same hyperparameters for 4 of 5 models; false positives fell slightly (0-8%), true positives by 0-4%. <br><br>**Fairness:** no improvement. The false-positive rate is still about 1.7-1.9 times higher for African-American than for Caucasian defendants (e.g. 0.28 vs 0.15 for gradient boosting; COMPAS 0.45 vs 0.23). <br><br>Caveat: HistGradientBoosting used `class_weight: balanced`; naive Bayes was not tuned. |
 | 8 | **XGBoost + feature selection:** `xgboost` (`XGBClassifier`) registered in `src/model.py` with an Optuna search space in the YAML (no `scale_pos_weight`, it would add false positives). New `VoteSelector` step between preprocessing and model, switched with `feature_selection.enabled`: random forest, gradient boosting and an L1 logistic regression vote, features with at least `min_votes` votes are kept; fitted on training rows only, `min_votes` tuned with the model. | **XGBoost, F0.5 (accuracy), nested CV:** untuned 0.642 (0.675), tuned 0.645 (0.677), tuned + feature selection 0.647 (0.679, kept 5 of 16 features). Tuning and selection each add about +0.003, but paired tests give p = 0.69 and 0.71 and the gaps are smaller than the fold std (~0.015), so neither is a real gain. Selection does match the full model with a third of the features (age, priors_count, log_priors, priors_per_adult_year, age_cat). False positive rate African-American / Caucasian: 0.30 / 0.18 untuned, 0.30 / 0.15 tuned, 0.28 / 0.15 with selection, so fairness barely moves (COMPAS: 0.45 / 0.23). Other models, selection with min_votes=2 and no tuning, vs their untuned score: GB 0.639 (0.643), AdaBoost 0.637 (0.639), LR 0.637 (0.644), RF 0.595 (0.599), all slightly lower, within noise. |
 | 9 | **Beyond COMPAS (option A, Adult income):** the pipeline now also runs on a second dataset, the Adult income data, with its own `config_adult.yaml` (`python main.py config_adult.yaml`). Plain `python main.py` still runs COMPAS and gives the same numbers as before (checked against the week 8 run). I fixed the parts of the code that only worked for COMPAS, and added `src/predict.py`, which predicts the 2,000 new people in `adult_new.csv`. | XGBoost with fixed parameters reaches all three targets on Adult: ROC-AUC 0.912, accuracy 0.863, F1 0.681 (gradient boosting with defaults is very close: 0.912 / 0.861 / 0.675). Tuning did not help either model, and tuned gradient boosting misses the accuracy target by 0.001. Feature selection keeps 8 of the 36 features and drops all 25 anonymous `v` columns. More in "Beyond COMPAS" below. |
+| 10 | **Missing values:** the numeric imputer is now a setting, `preprocessing.imputation.numeric_strategy` in the YAML (`median`, `mean`, `knn`, `iterative` = MICE, `random_forest` = missForest). The numeric columns are scaled first and then imputed, so KNN compares columns on one scale. All of them learn from the features only, never from the target.<br><br>**Saving and predicting:** `main.py` saves the final fitted pipeline to `models/model.joblib`, and the new `predict.py` loads it and predicts a CSV from the terminal (one row per input row). | On COMPAS no imputer is significantly better than the median (best: iterative, F0.5 0.647 vs 0.642, p = 0.42), so I keep `median`. `predict.py` writes 20 predictions for `compas_new_people.csv`. Details in "Missing values" and "Predicting new data" below. |
 
 ## Environment setup
 
@@ -163,6 +166,8 @@ In `config_adult.yaml`, `tuning.enabled` and `feature_selection.enabled` switch 
 | **XGBoost** | **no** | **0.912 ± 0.017** | **0.863 ± 0.013** | **0.681 ± 0.036** | fixed: 200 trees, learning rate 0.1, depth 3 |
 | XGBoost | yes | 0.908 ± 0.016 | 0.855 ± 0.010 | 0.675 ± 0.033 | tuned (`min_votes` 2) |
 
+The "no model" row is the baseline from the assignment (a model that always answers "<= 50K": 76% of people earn 50K or less); my own runs confirm its F1 of 0.00 on the same folds.
+
 The targets are ROC-AUC >= 0.90, accuracy >= 0.855 and F1 >= 0.66, all in the same run. XGBoost with fixed parameters reaches all three with the best margins, and so does gradient boosting with defaults. Tuned XGBoost is right at the limit on accuracy (0.855), and tuned gradient boosting misses accuracy by 0.001.
 
 **Features kept.** Every run keeps the same 8 of the 36 features: `age`, `education_num`, `capital_gain`, `capital_loss`, `hours_per_week`, `marital_status`, `occupation` and `relationship`. None of the `v01`-`v25` columns survived, and neither did the `workclass` missingness flag.
@@ -172,6 +177,31 @@ The targets are ROC-AUC >= 0.90, accuracy >= 0.855 and F1 >= 0.66, all in the sa
 **Predictions.** `adult_predictions.csv` has id, probability and a 0/1 prediction for the 2,000 people in `adult_new.csv`. It comes from the XGBoost run with fixed parameters.
 
 **What was the hardest assumption to find?** The `?` placeholders, because nothing crashed: the cleaning only handled placeholders in columns that had category rules, so `?` would have quietly stayed a category. The targets did not need tuning, since plain boosted trees with feature selection already reach them, and selection threw out all 25 anonymous columns. Tuning gave no gain: in corrected paired tests on the folds, tuned vs fixed gave p = 0.37 for gradient boosting and 0.51 for XGBoost on F1, and XGBoost vs gradient boosting gave p = 0.25, so the differences between the four runs are within the fold-to-fold noise. The tuned gradient boosting was also a bit optimistic (F1 0.678 inside the folds vs 0.661 outside).
+
+## Missing values
+
+The imputer is chosen in the YAML (`preprocessing.imputation.numeric_strategy`). I compared the four options on COMPAS with XGBoost (fixed parameters, no tuning, no feature selection) on the same folds, using the corrected paired test against the median.
+
+| Imputer | F0.5 (mean ± std) | Difference vs median | p-value vs median |
+|---|---|---|---|
+| `median` (baseline) | 0.642 ± 0.017 | | |
+| `knn` | 0.642 ± 0.017 | 0.000 | 1.00 |
+| `iterative` (MICE) | 0.647 ± 0.016 | +0.005 | 0.42 |
+| `random_forest` (missForest) | 0.639 ± 0.017 | -0.003 | 0.23 |
+
+None of the imputers is significantly different from the median: the biggest gap (iterative, +0.005) is smaller than the fold-to-fold std (about 0.017) and its p-value is 0.42. So I keep `median`: it is the simplest, the fastest, and the fancier imputers give no measurable gain here, probably because the gaps are small (at most about 6% of rows, in `priors_count`) and the model barely depends on the exact filled value.
+
+Changing the order to "scale, then impute" did not change the median baseline (same scores to three decimals), so the earlier runs stay comparable. In the scoreboard, runs from before this week show `median_old` in the `imputer` column.
+
+## Predicting new data
+
+```
+python main.py                                                 # trains, evaluates, saves models/model.joblib
+python predict.py data/compas_new_people.csv predictions.csv   # predicts, no training
+```
+For the Adult config: `python main.py config_adult.yaml`, then `python predict.py data/adult_new.csv adult_predictions.csv --config config_adult.yaml`.
+
+`predictions.csv` has one row per person, with three columns: `id`, `probability` (of the positive class, here reoffending within two years) and `prediction` (1 if the probability is at least 0.5). For `compas_new_people.csv` it has 20 rows. The file is not clean on purpose, and nobody is dropped: person 900004 has `priors_count = "?"` and 900008 has no age (the cleaning makes them gaps and the saved imputer fills them), 900012 has a charge degree never seen in training (`"X"`, which the encoders accept), and 900015 and 900016 are the same person twice (both are kept, with the same prediction). The model file is not tracked in git, so `main.py` has to run first.
 
 ## Dataset
 

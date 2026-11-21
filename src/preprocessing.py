@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 from category_encoders import CountEncoder
 from sklearn.compose import ColumnTransformer
-from sklearn.impute import SimpleImputer
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.experimental import enable_iterative_imputer  # noqa: F401  (makes IterativeImputer importable)
+from sklearn.impute import IterativeImputer, KNNImputer, SimpleImputer
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
@@ -184,11 +186,29 @@ _ENCODERS = {
 }
 
 
+# Numeric imputers, chosen by `preprocessing.imputation.numeric_strategy` in the YAML. "iterative" is
+# MICE with one completed dataset; "random_forest" is the missForest idea (each column predicted from
+# the others by a random forest). All of them learn from the features only, never from the target,
+# so they run unchanged inside cross-validation and on new people.
+_NUMERIC_IMPUTERS = {
+    "median": lambda cfg, seed: SimpleImputer(strategy="median"),
+    "mean": lambda cfg, seed: SimpleImputer(strategy="mean"),
+    "knn": lambda cfg, seed: KNNImputer(n_neighbors=cfg.get("n_neighbors", 5)),
+    "iterative": lambda cfg, seed: IterativeImputer(max_iter=cfg.get("max_iter", 10), random_state=seed),
+    "random_forest": lambda cfg, seed: IterativeImputer(
+        estimator=RandomForestRegressor(n_estimators=cfg.get("n_estimators", 50), min_samples_leaf=5,
+                                        random_state=seed, n_jobs=-1),
+        max_iter=cfg.get("max_iter", 10), random_state=seed),
+}
+
+
 def build_preprocessor(preprocessing_config: dict) -> ColumnTransformer:
     """
-    Build an unfitted ColumnTransformer (impute -> scale numerics, impute -> encode
+    Build an unfitted ColumnTransformer (scale -> impute numerics, impute -> encode
     categoricals, pass missingness flags through) from config.yaml's `preprocessing`
-    section. Fitting happens inside the model Pipeline, on training data only.
+    section. The numeric columns are scaled first, so distance-based imputers (KNN) compare
+    columns on one scale (the scalers ignore NaN when they learn the scale). Fitting happens
+    inside the model Pipeline, on training data only.
     """
     encoder_name = preprocessing_config["encoder"]
     scaler_name = preprocessing_config["scaler"]
@@ -203,9 +223,13 @@ def build_preprocessor(preprocessing_config: dict) -> ColumnTransformer:
     scaler = scaler_factory() if callable(scaler_factory) else scaler_factory
     encoder = _ENCODERS[encoder_name](preprocessing_config.get("random_state"))
 
+    numeric_strategy = imputation.get("numeric_strategy", "median")
+    if numeric_strategy not in _NUMERIC_IMPUTERS:
+        raise ValueError(f"Unknown numeric_strategy: {numeric_strategy}. Options: {list(_NUMERIC_IMPUTERS)}")
+
     numeric_pipeline = Pipeline([
-        ("impute", SimpleImputer(strategy=imputation.get("numeric_strategy", "median"))),
         ("scale", scaler),
+        ("impute", _NUMERIC_IMPUTERS[numeric_strategy](imputation, preprocessing_config.get("random_state"))),
     ])
     categorical_pipeline = Pipeline([
         ("impute", SimpleImputer(strategy=imputation.get("categorical_strategy", "most_frequent"))),
